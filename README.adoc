@@ -1,0 +1,487 @@
+:projectid: kubernetes-caching-hazelcast-microprofile
+:page-layout: guide
+:page-duration: 15 minutes
+:page-releasedate: 2019-06-20
+:page-description: Explore how to use caching in microservices within Kubernetes environment.
+:page-tags: ['Hazelcast', 'Caching', 'Microservices', 'Kubernetes', 'Containers','Microprofile' , 'Minikube']
+:page-permalink: /guides/{projectid}
+:page-related-guides: ['docker', 'kubernetes-intro']
+:source-highlighter: prettify
+:page-seo-title: Caching in microservices with Hazelcast Tutorial
+:page-seo-description: How to use Hazelcast with microservices
+= Caching Microservices with Hazelcast in Kubernetes
+
+Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernetes
+
+:minikube-ip: 192.168.99.100
+:kube: Kubernetes
+:hashtag: #
+:win: WINDOWS
+:mac: MAC
+:linux: LINUX
+:hazelcast: Hazelcast
+
+// =================================================================================================
+// What you'll learn
+// =================================================================================================
+
+== What you'll learn
+
+You will learn how to use Hazelcast distributed caching with Microprofile and deploy to a local {kube} cluster.
+You will then create a Kubernetes Service which load balance between containers and verify that you can share data between Microservices.
+
+The microservice you will deploy is called `hazelcast-microprofile`. The `hazelcast-microprofile` microservice simply
+helps you put a data and read it back. As Kubernetes Service will send the request to different pod each time 
+you initiate the request, the data will be served by shared hazelcast cluster between `hazelcast-microprofile` pods.
+
+You will use a local single-node {kube} cluster. However, you can deploy this application on any kubernetes distributions.
+
+== What is {hazelcast}?
+Hazelcast is an open source In-Memory Data Grid (IMDG). It provides elastically scalable distributed In-Memory computing, 
+widely recognized as the fastest and most scalable approach to application performance.
+
+Hazelcast is designed to scale up to hundreds and thousands of members. 
+Simply add new members and they will automatically discover the cluster 
+and will linearly increase both memory and processing capacity
+
+== Why Microprofile?
+
+The MicroProfile is a baseline platform definition that optimizes Enterprise Java for a microservices architecture and delivers application portability across multiple MicroProfile runtimes
+To learn more about Microprofile. 
+https://microprofile.io/
+
+// =================================================================================================
+// Prerequisites
+// =================================================================================================
+
+== Prerequisites
+
+Before you begin, have the following tools installed:
+
+
+First, you will need a containerization software for building containers. {kube} supports a variety
+ of container types. You will use `Docker` in this guide. For installation instructions, refer to the https://docs.docker.com/install/[official Docker documentation^].
+
+****
+[system]#*{win} | {mac}*#
+
+Use Docker Desktop, where a local {kube} environment is pre-installed and enabled. If you do not see the {kube} tab then you have an older version of Docker Desktop; upgrade to the latest version.
+
+Complete the setup for your operating system:
+
+ - Set up  https://docs.docker.com/docker-for-windows/#kubernetes[Docker for Windows^]. 
+ On the Docker for Windows _General Setting_ page, ensure that the option `Expose daemon on 
+ tcp://localhost:2375 without TLS` is enabled. This is required by the `dockerfile-maven` 
+ part of the build.
+ - Set up https://docs.docker.com/docker-for-mac/#kubernetes[Docker for Mac^].
+
+- After following one of the sets of instructions, ensure that {kube} (not Swarm) is selected as the orchestrator in Docker Preferences.
+
+[system]#*{linux}*#
+
+You will use `Minikube` as a single-node {kube} cluster that runs locally in a virtual machine.
+For Minikube installation instructions see the https://github.com/kubernetes/minikube#installation[minikube installation instructions^]. Make sure to pay attention to the requirements as they vary by platform.
+
+You will also need Maven to build the jar file. For Maven installation instructions see the https://maven.apache.org/install.html[maven installation instructions^].
+
+****
+
+== Getting started
+
+The fastest way to work through this guide is to clone the Git repository and use the projects that are provided inside:
+
+[subs="attributes"]
+----
+git clone https://github.com/enozcan/guides-kubernetes-caching-hazelcast-microprofile
+cd guide-{projectid}
+----
+
+The `initial` directory contains the starting project that you will build upon.
+
+The `final` directory contains the finished project that you will build.
+
+
+== Running Microprofile Application
+
+The application in initial directory is a basic Microprofile app having a few endpoints. We are going to use only `/application/map/put` and `/application/map/get` endpoints through this guide.
+
+Build and run the app using Maven in the `initial` directory:
+
+----
+$ > mvn install liberty:run-server 
+----
+
+When the log  `"The GettingStartedServer server is ready to run a smarter planet."` is seen, the app is ready and runnning on localhost:9080. You can test by following requests:
+
+----
+$ > curl "http://localhost:9080/application/map/put?key=key_1&value=hazelcast"
+$ > curl "http://localhost:9080/application/map/get?key=key_1"
+----
+The first one will not return a response. The second one will return the value (`hazelcast` in this request) and the responding pod (currently `null`) belongs to the key given as parameter.
+
+This part was an introduction of the applicaiton. You can stop your application by CTRL + C.
+
+== Dockerizing the App
+
+To create the docker image of the application, use `docker-image` profile existing in the `pom.xml`.
+This profile will build the docker image using the Dockerfile under `initial` directory.
+
+
+Build the app using profile:
+----
+$ > mvn clean package -P docker-image
+----
+
+Now, the image must be seen among the Docker images:
+----
+$ > docker images
+
+REPOSITORY                                 TAG                 IMAGE ID            CREATED             SIZE
+openliberty-hazelcast-microprofile         1.0-SNAPSHOT        275a0f74c8ba        27 seconds ago      452MB
+----
+
+== Running the app in container
+
+Now that the Docker image is ready, check if the image runs properly:
+
+----
+$ > docker run -p 9080:9080 openliberty-hazelcast-microprofile:1.0-SNAPSHOT
+----
+
+Test the app on the port 9080:
+----
+$ > curl "http://localhost:9080/application/map/put?key=key_1&value=hazelcast"
+$ > curl "http://localhost:9080/application/map/get?key=key_1"
+----
+If you see the same responses as the ones you get when the app is run without container, that means it's all OK with the image.
+
+To stop the container, get the container ID first:
+----
+$ > docker ps
+----
+Then find the application's container ID and stop the container:
+----
+$ > docker stop [CONTAINER-ID]
+----
+
+== Starting and preparing your cluster for deployment
+
+Now that you have a proper docker image, deploy the app to kuberntes pods. Start your {kube} cluster first.
+
+****
+[system]#*{win} | {mac}*#
+
+Start your Docker Desktop environment. Make sure "Docker Desktop is running" and "Kubernetes is running" status are updated. 
+
+ifdef::docker-desktop-description[]
+{docker-desktop-description}
+endif::[]
+
+[system]#*{linux}*#
+
+Run the following command from a command line:
+
+[subs="attributes"]
+```
+ifdef::minikube-start[]
+{minikube-start}
+endif::[]
+ifndef::minikube-start[]
+minikube start
+endif::[]
+```
+
+ifdef::minikube-description[]
+{minikube-description}
+endif::[]
+****   
+
+=== Validate {kube} environment
+
+Next, validate that you have a healthy {kube} environment by running the following command from the command line.
+
+```
+$ > kubectl get nodes
+```
+
+This command should return a `Ready` status for the master node.
+
+****
+[system]#*{win} | {mac}*#
+
+You do not need to do any other step.
+
+[system]#*{linux}*#
+
+Run the following command to configure the Docker CLI to use Minikube's Docker daemon.
+After you run this command, you will be able to interact with Minikube's Docker daemon and build new
+images directly to it from your host machine:
+
+```
+eval $(minikube docker-env)
+```
+****
+
+
+After you're sure that a master node is ready, create kubernetes.yaml under `initial` directory with the same content in the `final/kubernetes.yaml` file.
+
+This file defines two {kube} resources: one statefulset and one service. 
+StatefulSet is preferred solution for Hazelcast because it enables controlled scale out/in of your microservices 
+for easy data distribution. To learn more about StatefulSet, you can visit Kubernetes documentation
+https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/
+
+By default, we create 2 replicas of `hazelcast-microprofile` microservice behind the `hazelcast-microprofile-service` which forwards requests to one of the pods available in the kubernetes cluster.
+
+`MY_POD_NAME` is an environment variable made available to the pods so that each microservice knows which pod they are in.
+This is going to be used in this guide in order to show which pod is responding to the http request. It's fetched and used in the `MapResource.java` file.
+
+Now, run the following command to deploy the resources as defined in kubernetes.yaml:
+----
+$ > kubectl apply -f kubernetes.yaml
+----
+Run the following command to check the status of your pods:
+----
+$ > kubectl get pods
+----
+
+You'll see an output similar to the following if all the pods are healthy and running:
+----
+NAME                                   READY     STATUS    RESTARTS   AGE
+hazelcast-microprofile-statefulset-0   1/1       Running   0          7s
+hazelcast-microprofile-statefulset-1   1/1       Running   0          3s
+----
+Even if the status of the nodes are `Running`, they might be not started yet. Check the pod logs to be sure they're ready:
+----
+$ > kubectl logs hazelcast-microprofile-statefulset-0
+----
+You must see those lines among other log reports:
+----
+SSL certificate created in 58.745 seconds.
+The defaultServer server is ready to run a smarter planet..
+----
+
+And add a value to the map and then get the value. The responses might take a while:
+----
+
+$ > curl "http://localhost:31000/application/map/put?key=key1&value=hazelcast"
+$ > while true; do curl localhost:31000/application/map/get?key=key1;echo; sleep 2; done
+
+hazelcast from hazelcast-microprofile-statefulset-0
+hazelcast from hazelcast-microprofile-statefulset-0
+null from hazelcast-microprofile-statefulset-1
+null from hazelcast-microprofile-statefulset-1
+----
+
+As can be seen, data is inserted by `hazelcast-microprofile-statefulset-0` and  not shared with the other node. Here is where Hazelcast comes into action.
+
+Kill active pods under `initial` directory by:
+----
+$ > kubectl delete -f kubernetes.yaml
+----
+
+== Hazelcast Caching among Kubernetes pods
+
+Now we will use Hazelcast Caching among the pods. Update the pom.xml file by adding those dependencies under below the line `<!-- Hazelcast Dependencies -->` :
+----
+<dependency>
+    <groupId>com.hazelcast</groupId>
+    <artifactId>hazelcast</artifactId>
+    <version>3.11.2</version>
+</dependency>
+
+<dependency>
+    <groupId>com.hazelcast</groupId>
+    <artifactId>hazelcast-kubernetes</artifactId>
+    <version>1.3.1</version>
+</dependency>
+----
+
+Modify `MapApplicaiton.java` and create an application scoped Hazelcast instance inside the class:
+----
+...
+...
+import com.hazelcast.config.Config;
+import com.hazelcast.config.JoinConfig;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import javax.enterprise.inject.Produces;
+
+public class MapApplication extends Application {
+    @Produces
+    HazelcastInstance create() {
+        Config config = new Config();
+        config.getGroupConfig().setName("MP-GUIDE");
+        JoinConfig joinConfig = config.getNetworkConfig().getJoin();
+        joinConfig.getMulticastConfig().setEnabled(false);
+        joinConfig.getKubernetesConfig().setEnabled(true);
+        return Hazelcast.newHazelcastInstance(config);
+    }
+}
+----
+
+Then modify `MapManager.java` such that map is fetched from Hazelcast instance:
+----
+...
+...
+import javax.inject.Inject;
+import com.hazelcast.core.HazelcastInstance;
+
+@ApplicationScoped
+public class MapManager {
+
+    @Inject
+    HazelcastInstance instance;
+
+    //Map<String,String> keyValueStore = new ConcurrentHashMap<>();
+
+    private Map<String,String> retrieveMap() {
+        return instance.getMap("map");
+    }
+
+    ...
+    ...
+}
+----
+
+Before deploying on kubernetes, create rbac.yaml file as in the `final` directory. Role Based Access Controller(RBAC) configuration is used to give access to Kubernetes Master API from pods which runs microservices. Hazelcast requires a read access to autodiscover other hazelcast members and form hazelcast cluster.
+----
+## rbac.yaml:
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: default-cluster
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: default
+----
+
+Rebuild the app and create new image:
+----
+$ > mvn clean package -P docker-image
+----
+
+Run the following commands to deploy the resources as defined in kubernetes.yaml and rbac.yaml in the specified order:
+----
+$ > kubectl apply -f rbac.yaml
+----
+----
+$ > kubectl apply -f kubernetes.yaml
+----
+
+Run the following command to check the status of your pods:
+----
+$ > kubectl get pods
+----
+
+Even if the status of the nodes are `Running`, they might be not started yet. Check the pod logs to be sure they're ready:
+----
+$ > kubectl logs hazelcast-microprofile-statefulset-0
+----
+You must see those lines among other log reports. If not, wait for servers to be start:
+----
+SSL certificate created in 58.745 seconds.
+The defaultServer server is ready to run a smarter planet..
+----
+
+Now we expect all nodes to give the same value for the same key put on the map by a particular pods. Let's try (The responses might take a while at the first time):
+----
+$ > curl "http://localhost:31000/application/map/put?key=key_1&value=hazelcast"
+$ > while true; do curl localhost:31000/application/map/get?key=key_1;echo; sleep 2; done
+
+hazelcast from hazelcast-microprofile-statefulset-1
+hazelcast from hazelcast-microprofile-statefulset-0
+hazelcast from hazelcast-microprofile-statefulset-0
+hazelcast from hazelcast-microprofile-statefulset-1
+----
+
+As can be seen but both nodes give the same value for the key now.
+
+== Scaling with Hazelcast
+
+Scale the cluster with one more pod and see that you still retrieve the shared data.
+
+[role='command']
+```
+kubectl scale statefulset hazelcast-microprofile-statefulset --replicas=3
+```
+
+Run following command to see the latest status of the pods
+[role='command']
+```
+kubectl get pods
+```
+
+As you can see, a new pod `hazelcast-microprofile-statefulset-2` has joined to the cluster.
+[source, role="no_copy"]
+----
+NAME                                   READY     STATUS    RESTARTS   AGE
+hazelcast-microprofile-statefulset-0   1/1       Running   0          13m
+hazelcast-microprofile-statefulset-1   1/1       Running   0          13m
+hazelcast-microprofile-statefulset-2   1/1       Running   0          6s
+----
+
+Wait for new pod to start and then run the following command again to see the output:
+[role='command']
+```
+while true; do curl "http://localhost:31000/application/map/get?key=key_1";echo; sleep 2; done
+```
+hazelcast from hazelcast-microprofile-statefulset-1
+hazelcast from hazelcast-microprofile-statefulset-2
+hazelcast from hazelcast-microprofile-statefulset-0
+hazelcast from hazelcast-microprofile-statefulset-2
+----
+
+As you can see, `hazelcast-microprofile-statefulset-2` is returning correct data.
+
+
+== Testing microservices that are running on {kube}
+
+`ADD TEST HERE`
+
+== Tearing down the environment
+
+When you no longer need your deployed microservices, you can delete all Kubernetes resources by running the kubectl delete command: You might need to wait up to 30 seconds as stateful sets kills pods one at a time.
+
+----
+kubectl delete -f kubernetes.yaml
+----
+
+****
+[system]#*{win} | {mac}*#
+
+Nothing more needs to be done for Docker Desktop.
+
+[system]#*{linux}*#
+
+Perform the following steps to return your environment to a clean state.
+
+. Point the Docker daemon back to your local machine:
++
+```
+eval $(minikube docker-env -u)
+```
+
+. Stop your Minikube cluster:
++
+```
+minikube stop
+```
+
+. Delete your cluster:
++
+```
+minikube delete
+```
+
+****
+
+== Great work! You’re done!
+
+You have just run a Microprofile application and created its Docker image. First you runned the app on a container and then deployed it to Kubernetes. You then added Hazelcast caching to the hazelcast-microprofile, tested with a simple curl command. You also scaled out the microservices and saw that data is shared between microservices.
+
