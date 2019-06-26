@@ -443,7 +443,42 @@ As you can see, `hazelcast-microprofile-statefulset-2` is returning correct data
 
 == Testing microservices that are running on {kube}
 
-`ADD TEST HERE`
+Create a testing class under `/initial/src/test/java/io/openliberty/sample/system` named `MapResourceTest.java` .The contents of the test file is available under `final` directoy.
+
+Also modify the activate the testing dependencies & plugins in pom.xml file.
+
+The test makes sure that the /put endpoint is handled by one pod and /get methods returns the same data from the other kubernetes pod.
+
+It first puts a key/value pair to hazelcast-microprofile microservice and keeps podname in the firstpod variable. In the second part, tests submits multiple /get requests until to see that podname is different than the pod which initially handled /put request.
+
+In order to run integration tests, you must have a running hazelcast-microprofile microservices in minikube environment. As you have gone through all previous steps, you already have it.
+
+Run test under `initial` directory:
+
+----
+$ > mvn -Dtest=MapResourceTest test
+----
+
+If the tests pass, you’ll see a similar output to the following:
+
+----
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running io.openliberty.sample.system.MapResourceTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.48 s - in io.openliberty.sample.system.MapResourceTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  19.801 s
+[INFO] Finished at: 2019-06-26T17:40:50+03:00
+[INFO] ------------------------------------------------------------------------
+----
 
 == Tearing down the environment
 
@@ -484,5 +519,5 @@ minikube delete
 
 == Great work! You’re done!
 
-You have just run a Microprofile application and created its Docker image. First you runned the app on a container and then deployed it to Kubernetes. You then added Hazelcast caching to the hazelcast-microprofile, tested with a simple curl command. You also scaled out the microservices and saw that data is shared between microservices.
+You have just run a Microprofile application and created its Docker image. First you runned the app on a container and then deployed it to Kubernetes. You then added Hazelcast caching to the hazelcast-microprofile, tested with a simple curl command. You also scaled out the microservices and saw that data is shared between microservices. As a last step, you ran integration tests against hazelcast-microprofile that was deployed in a Kubernetes cluster.
 
