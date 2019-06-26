@@ -98,6 +98,8 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- Hazelcast Dependencies -->
+
         <!-- Open Liberty Features -->
         <dependency>
             <groupId>io.openliberty.features</groupId>
