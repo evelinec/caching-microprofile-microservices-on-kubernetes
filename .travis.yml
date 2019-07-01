@@ -12,7 +12,7 @@ env:
     - MINIKUBE_HOME=$HOME
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
-install:
+script:
 # Download kubectl, which is a requirement for using minikube.
 - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 # Download minikube.
@@ -21,11 +21,7 @@ install:
 - touch $KUBECONFIG
 - sudo minikube start --vm-driver=none --kubernetes-version=v1.13.0 
 - "sudo chown -R travis: /home/travis/.minikube/"
-
-before_script:
 - cd final
-
-script:
 # Create the docker images
 - mvn clean package -P docker-image -DskipTests 1>/dev/null 
 # Following is just to demo that the kubernetes cluster works.
@@ -39,8 +35,6 @@ script:
 - kubectl get pods
 - kubectl apply -f rbac.yaml
 - kubectl apply -f kubernetes.yaml
-
-after_script:
 - kubectl get nodes
 # Wait until the second pod to be ready
 - until kubectl get pods | grep -q "hazelcast-microprofile-statefulset-1"; do sleep 1;echo "waiting for the second pod to be available"; done
