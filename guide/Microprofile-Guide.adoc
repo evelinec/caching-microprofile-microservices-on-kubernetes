@@ -8,6 +8,8 @@
 :source-highlighter: prettify
 :page-seo-title: Caching in microservices with Hazelcast Tutorial
 :page-seo-description: How to use Hazelcast with microservices
+:templates-url: https://raw.githubusercontent.com/enozcan/adoc-templates/master
+
 = Caching Microservices with Hazelcast in Kubernetes
 
 Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernetes
@@ -24,9 +26,9 @@ Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernet
 :framework-short: microprofile
 :github-address: https://github.com/enozcan/guides-kubernetes-caching-hazelcast-microprofile
 
-include::templates/what-will-learn.adoc[]
+include::{templates-url}/what-will-learn.adoc[]
 
-include::templates/what-is-hz.adoc[]
+include::{templates-url}/what-is-hz.adoc[]
 
 == Why Microprofile?
 
@@ -34,9 +36,9 @@ The MicroProfile is a baseline platform definition that optimizes Enterprise Jav
 To learn more about Microprofile. 
 https://microprofile.io/
 
-include::templates/prereq.adoc[]
+include::{templates-url}/prereq.adoc[]
 
-include::templates/getting-started.adoc[]
+include::{templates-url}/getting-started.adoc[]
 
 == Running Microprofile Application
 
@@ -101,9 +103,9 @@ Then find the application's container ID and stop the container:
 $ > docker stop [CONTAINER-ID]
 ----
 
-include::templates/start-cluster.adoc[]
+include::{templates-url}/start-cluster.adoc[]
 
-include::templates/validate-kube-env.adoc[]
+include::{templates-url}/validate-kube-env.adoc[]
 
 
 After you're sure that a master node is ready, create kubernetes.yaml under `initial` directory with the same content in the `final/kubernetes.yaml` file.
@@ -364,6 +366,6 @@ If the tests pass, you’ll see a similar output to the following:
 ----
 
 
-include::templates/minikube-teardown.adoc[]
+include::{templates-url}/minikube-teardown.adoc[]
 
-include::templates/youre-done.adoc[]
+include::{templates-url}/youre-done.adoc[]
