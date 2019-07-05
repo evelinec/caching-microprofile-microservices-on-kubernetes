@@ -30,6 +30,10 @@
         <version.maven-failsafe-plugin>3.0.0-M1</version.maven-failsafe-plugin>
         -->
 
+        <!-- Hazelcast Versions -->
+        <version.hazelcast>3.11.2</version.hazelcast>
+        <version.hazelcast-kubernetes>1.3.1</version.hazelcast-kubernetes>
+
         <!-- OpenLiberty runtime -->
         <version.openliberty-runtime>RELEASE</version.openliberty-runtime>
         <http.port>9080</http.port>
