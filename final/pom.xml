@@ -26,8 +26,10 @@
         <version.dockerfile-maven-plugin>1.4.10</version.dockerfile-maven-plugin>
 
 
-        <version.maven-surefire-plugin>3.0.0-M1</version.maven-surefire-plugin>
+
+        <version.maven-surefire-plugin>3.0.0-M3</version.maven-surefire-plugin>
         <version.maven-failsafe-plugin>3.0.0-M3</version.maven-failsafe-plugin>
+
 
         <!-- Hazelcast Versions -->
         <version.hazelcast>3.11.2</version.hazelcast>
