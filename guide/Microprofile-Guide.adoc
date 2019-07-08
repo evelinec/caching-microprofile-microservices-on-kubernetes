@@ -32,7 +32,7 @@ include::{templates-url}/what-is-hz.adoc[]
 
 == Why Microprofile?
 
-The MicroProfile is a baseline platform definition that optimizes Enterprise Java for a microservices architecture and delivers application portability across multiple MicroProfile runtimes
+The MicroProfile is a baseline platform definition that optimizes Enterprise Java for a microservices architecture and delivers application portability across multiple MicroProfile runtimes.
 To learn more about Microprofile. 
 https://microprofile.io/
 
@@ -56,7 +56,7 @@ When the log  `"The GettingStartedServer server is ready to run a smarter planet
 $ > curl "http://localhost:9080/application/map/put?key=key_1&value=hazelcast"
 $ > curl "http://localhost:9080/application/map/get?key=key_1"
 ----
-The first one will not return a response. The second one will return the value (`hazelcast` in this request) and the responding pod (currently `null`) belongs to the key given as parameter.
+The first one will not return a response. The second one will return the value belongs to the key given as parameter(`key_1` and `hazelcast` in this request) and the responding pod (currently `null`).
 
 This part was an introduction of the applicaiton. You can stop your application by *CTRL + C*.
 
@@ -66,7 +66,7 @@ To create the docker image of the application, use `docker-image` profile existi
 This profile will build the docker image using the Dockerfile under `initial` directory.
 
 
-Build the app using profile:
+Build the app under `initial` directory using profile:
 ----
 $ > mvn clean package -P docker-image
 ----
@@ -108,11 +108,11 @@ include::{templates-url}/start-cluster.adoc[]
 include::{templates-url}/validate-kube-env.adoc[]
 
 
-After you're sure that a master node is ready, create kubernetes.yaml under `initial` directory with the same content in the `final/kubernetes.yaml` file.
+After you are sure that a master node is ready, create kubernetes.yaml under `initial` directory with the same content in the `final/kubernetes.yaml` file.
 
 This file defines two {kube} resources: one statefulset and one service. 
 StatefulSet is preferred solution for Hazelcast because it enables controlled scale out/in of your microservices 
-for easy data distribution. To learn more about StatefulSet, you can visit Kubernetes documentation
+for easy data distribution. To learn more about StatefulSet, you can visit Kubernetes documentation: 
 https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/
 
 By default, we create 2 replicas of `hazelcast-microprofile` microservice behind the `hazelcast-microprofile-service` which forwards requests to one of the pods available in the kubernetes cluster.
@@ -145,7 +145,7 @@ SSL certificate created in 58.745 seconds.
 The defaultServer server is ready to run a smarter planet..
 ----
 
-And add a value to the map and then get the value. The responses might take a while:
+And add a value to the map and then get the value:
 ----
 
 $ > curl "http://localhost:31000/application/map/put?key=key1&value=hazelcast"
@@ -159,14 +159,14 @@ null from hazelcast-microprofile-statefulset-1
 
 As can be seen, data is inserted by `hazelcast-microprofile-statefulset-0` and  not shared with the other node. Here is where Hazelcast comes into action.
 
-Kill active pods under `initial` directory by:
+Before going in to the next step, kill active pods under `initial` directory by:
 ----
 $ > kubectl delete -f kubernetes.yaml
 ----
 
 == Hazelcast Caching among Kubernetes pods
 
-Now we will use Hazelcast Caching among the pods. Update the pom.xml file by adding those dependencies under below the line  *`<!-- Hazelcast Dependencies -->`* :
+Now we will use Hazelcast Caching among the pods. Update the pom.xml file by adding those dependencies under the line  *`<!-- Hazelcast Dependencies -->`* :
 ----
 <dependency>
     <groupId>com.hazelcast</groupId>
@@ -267,6 +267,7 @@ $ > kubectl get pods
 Even if the status of the nodes are `Running`, they might be not started yet. Check the pod logs to be sure they're ready:
 ----
 $ > kubectl logs hazelcast-microprofile-statefulset-0
+$ > kubectl logs hazelcast-microprofile-statefulset-1
 ----
 You must see those lines among other log reports. If not, wait for servers to be start:
 ----
@@ -274,7 +275,7 @@ SSL certificate created in 58.745 seconds.
 The defaultServer server is ready to run a smarter planet..
 ----
 
-Now we expect all nodes to give the same value for the same key put on the map by a particular pods. Let's try (The responses might take a while at the first time):
+Now we expect all nodes to give the same value for the same key put on the map by a particular pod. Let's try:
 ----
 $ > curl "http://localhost:31000/application/map/put?key=key_1&value=hazelcast"
 $ > while true; do curl localhost:31000/application/map/get?key=key_1;echo; sleep 2; done
@@ -285,7 +286,7 @@ hazelcast from hazelcast-microprofile-statefulset-0
 hazelcast from hazelcast-microprofile-statefulset-1
 ----
 
-As can be seen but both nodes give the same value for the key now.
+As can be seen both nodes give the same value for the key now.
 
 == Scaling with Hazelcast
 
