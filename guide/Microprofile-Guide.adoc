@@ -26,20 +26,39 @@ Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernet
 :framework-short: microprofile
 :github-address: https://github.com/enozcan/guides-kubernetes-caching-hazelcast-microprofile
 
+// =================================================================================================
+// What you'll learn
+// =================================================================================================
+
 include::{templates-url}/what-will-learn.adoc[]
 
+// =================================================================================================
+// What is Hazelcast?
+// =================================================================================================
 include::{templates-url}/what-is-hz.adoc[]
 
+// =================================================================================================
+// Why Microprofile?
+// =================================================================================================
 == Why Microprofile?
 
 The MicroProfile is a baseline platform definition that optimizes Enterprise Java for a microservices architecture and delivers application portability across multiple MicroProfile runtimes.
 To learn more about Microprofile. 
 https://microprofile.io/
 
+// =================================================================================================
+// Prerequisites
+// =================================================================================================
 include::{templates-url}/prereq.adoc[]
 
+// =================================================================================================
+// Getting Started
+// =================================================================================================
 include::{templates-url}/getting-started.adoc[]
 
+// =================================================================================================
+// Running the App
+// =================================================================================================
 == Running Microprofile Application
 
 The application in initial directory is a basic Microprofile app having a few endpoints. We are going to use only */application/map/put* and */application/map/get* endpoints through this guide.
@@ -60,6 +79,9 @@ The first one will not return a response. The second one will return the value b
 
 This part was an introduction of the applicaiton. You can stop your application by *CTRL + C*.
 
+// =================================================================================================
+// Dockerize
+// =================================================================================================
 == Dockerizing the App
 
 To create the docker image of the application, use `docker-image` profile existing in the `pom.xml`.
@@ -79,6 +101,9 @@ REPOSITORY                           TAG             IMAGE ID        CREATED    
 openliberty-hazelcast-microprofile   1.0-SNAPSHOT    275a0f74c8ba    27 seconds ago      452MB
 ----
 
+// =================================================================================================
+// Run in container
+// =================================================================================================
 == Running the app in container
 
 Now that the Docker image is ready, check if the image runs properly:
@@ -103,8 +128,14 @@ Then find the application's container ID and stop the container:
 $ > docker stop [CONTAINER-ID]
 ----
 
+// =================================================================================================
+// Starting Cluster
+// =================================================================================================
 include::{templates-url}/start-cluster.adoc[]
 
+// =================================================================================================
+// Validate Kube Environment
+// =================================================================================================
 include::{templates-url}/validate-kube-env.adoc[]
 
 
@@ -163,7 +194,9 @@ Before going in to the next step, kill active pods under `initial` directory by:
 ----
 $ > kubectl delete -f kubernetes.yaml
 ----
-
+// =================================================================================================
+// Hazelcast Caching among pods
+// =================================================================================================
 == Hazelcast Caching among Kubernetes pods
 
 Now we will use Hazelcast Caching among the pods. Update the pom.xml file by adding those dependencies under the line  *`<!-- Hazelcast Dependencies -->`* :
@@ -288,6 +321,9 @@ hazelcast from hazelcast-microprofile-statefulset-1
 
 As can be seen both nodes give the same value for the key now.
 
+// =================================================================================================
+// Scaling with Hazelcast
+// =================================================================================================
 == Scaling with Hazelcast
 
 Scale the cluster with one more pod and see that you still retrieve the shared data.
@@ -366,7 +402,12 @@ If the tests pass, you’ll see a similar output to the following:
 [INFO] ------------------------------------------------------------------------
 ----
 
-
+// =================================================================================================
+// Tearing down the environment
+// =================================================================================================
 include::{templates-url}/minikube-teardown.adoc[]
 
+// =================================================================================================
+// You are done
+// =================================================================================================
 include::{templates-url}/youre-done.adoc[]
