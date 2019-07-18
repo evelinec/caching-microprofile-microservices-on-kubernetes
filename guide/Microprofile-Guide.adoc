@@ -1,7 +1,7 @@
 :projectid: kubernetes-caching-hazelcast-microprofile
 :page-layout: guide
 :page-duration: 15 minutes
-:page-releasedate: 2019-06-20
+:page-releasedate: 2019-06-25
 :page-description: Explore how to use caching in microservices within Kubernetes environment.
 :page-tags: ['Hazelcast', 'Caching', 'Microservices', 'Kubernetes', 'Containers','Microprofile' , 'Minikube']
 :page-related-guides: ['docker', 'kubernetes-intro']
@@ -25,6 +25,8 @@ Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernet
 :framework: Microprofile
 :framework-short: microprofile
 :github-address: https://github.com/enozcan/guides-kubernetes-caching-hazelcast-microprofile
+
+include::{templates-url}/link-to-repo[]
 
 // =================================================================================================
 // What you'll learn
