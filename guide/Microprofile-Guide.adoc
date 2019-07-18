@@ -24,7 +24,7 @@ Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernet
 :hazelcast: Hazelcast
 :framework: Microprofile
 :framework-short: microprofile
-:github-address: https://github.com/enozcan/guides-kubernetes-caching-hazelcast-microprofile
+:github-address: https://github.com/enozcan/guide-kubernetes-caching-hazelcast-microprofile
 
 include::{templates-url}/link-to-repo.adoc[]
 
