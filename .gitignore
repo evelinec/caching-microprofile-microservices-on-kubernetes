@@ -1,5 +1,6 @@
 *.txt
 .DS_Store
-target/
+initial/target/*
+final/target/*
 
 
