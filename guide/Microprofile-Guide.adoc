@@ -1,19 +1,3 @@
-:projectid: kubernetes-caching-hazelcast-microprofile
-:page-layout: guide
-:page-duration: 15 minutes
-:page-releasedate: 2019-06-25
-:page-description: Explore how to use caching in microservices within Kubernetes environment.
-:page-tags: ['Hazelcast', 'Caching', 'Microservices', 'Kubernetes', 'Containers','Microprofile' , 'Minikube']
-:page-related-guides: ['docker', 'kubernetes-intro']
-:source-highlighter: prettify
-:page-seo-title: Caching in microservices with Hazelcast Tutorial
-:page-seo-description: How to use Hazelcast with microservices
-:templates-url: https://raw.githubusercontent.com/enozcan/adoc-templates/master
-
-= Caching Microservices with Hazelcast in Kubernetes
-
-Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernetes
-
 :minikube-ip: 192.168.99.100
 :project-id: kubernetes-caching-hazelcast-microprofile
 :kube: Kubernetes
@@ -24,43 +8,26 @@ Use Hazelcast Caching in Microprofile based Microservices and deploy to Kubernet
 :hazelcast: Hazelcast
 :framework: Microprofile
 :framework-short: microprofile
-:github-address: https://github.com/enozcan/guide-kubernetes-caching-hazelcast-microprofile
+:github-address: https://github.com/hazelcast-guides/caching-microprofiel-microservices-on-kubernetes
+:templates-url: https://raw.githubusercontent.com/hazelcast-guides/adoc-templates/master
+
+= Caching Microservices with Hazelcast in Kubernetes
 
 include::{templates-url}/link-to-repo.adoc[]
 
-// =================================================================================================
-// What you'll learn
-// =================================================================================================
+include::{templates-url}/what-will-learn-caching-ms.adoc[]
 
-include::{templates-url}/what-will-learn.adoc[]
-
-// =================================================================================================
-// What is Hazelcast?
-// =================================================================================================
 include::{templates-url}/what-is-hz.adoc[]
 
-// =================================================================================================
-// Why Microprofile?
-// =================================================================================================
 == Why Microprofile?
 
 The MicroProfile is a baseline platform definition that optimizes Enterprise Java for a microservices architecture and delivers application portability across multiple MicroProfile runtimes.
-To learn more about Microprofile. 
-https://microprofile.io/
+To learn more about Microprofile, visit https://microprofile.io/[website]
 
-// =================================================================================================
-// Prerequisites
-// =================================================================================================
-include::{templates-url}/prereq.adoc[]
+include::{templates-url}/prereq-caching-ms.adoc[]
 
-// =================================================================================================
-// Getting Started
-// =================================================================================================
 include::{templates-url}/getting-started.adoc[]
 
-// =================================================================================================
-// Running the App
-// =================================================================================================
 == Running Microprofile Application
 
 The application in initial directory is a basic Microprofile app having a few endpoints. We are going to use only */application/map/put* and */application/map/get* endpoints through this guide.
@@ -81,9 +48,6 @@ The first one will not return a response. The second one will return the value b
 
 This part was an introduction of the applicaiton. You can stop your application by *CTRL + C*.
 
-// =================================================================================================
-// Dockerize
-// =================================================================================================
 == Dockerizing the App
 
 To create the docker image of the application, use `docker-image` profile existing in the `pom.xml`.
@@ -103,9 +67,6 @@ REPOSITORY                           TAG             IMAGE ID        CREATED    
 openliberty-hazelcast-microprofile   1.0-SNAPSHOT    275a0f74c8ba    27 seconds ago      452MB
 ----
 
-// =================================================================================================
-// Run in container
-// =================================================================================================
 == Running the app in container
 
 Now that the Docker image is ready, check if the image runs properly:
@@ -130,23 +91,15 @@ Then find the application's container ID and stop the container:
 $ > docker stop [CONTAINER-ID]
 ----
 
-// =================================================================================================
-// Starting Cluster
-// =================================================================================================
 include::{templates-url}/start-cluster.adoc[]
 
-// =================================================================================================
-// Validate Kube Environment
-// =================================================================================================
 include::{templates-url}/validate-kube-env.adoc[]
-
 
 After you are sure that a master node is ready, create kubernetes.yaml under `initial` directory with the same content in the `final/kubernetes.yaml` file.
 
 This file defines two {kube} resources: one statefulset and one service. 
 StatefulSet is preferred solution for Hazelcast because it enables controlled scale out/in of your microservices 
-for easy data distribution. To learn more about StatefulSet, you can visit Kubernetes documentation: 
-https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/
+for easy data distribution. To learn more about StatefulSet, you can visit Kubernetes https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/[documentation].
 
 By default, we create 2 replicas of `hazelcast-microprofile` microservice behind the `hazelcast-microprofile-service` which forwards requests to one of the pods available in the kubernetes cluster.
 
@@ -196,12 +149,10 @@ Before going in to the next step, kill active pods under `initial` directory by:
 ----
 $ > kubectl delete -f kubernetes.yaml
 ----
-// =================================================================================================
-// Hazelcast Caching among pods
-// =================================================================================================
+
 == Hazelcast Caching among Kubernetes pods
 
-Now we will use Hazelcast Caching among the pods. Update the pom.xml file by adding those dependencies under the line  *`<!-- Hazelcast Dependencies -->`* :
+Now we will use Hazelcast Caching among the pods. Update the pom.xml file by adding those dependencies:
 ----
 <dependency>
     <groupId>com.hazelcast</groupId>
@@ -216,54 +167,9 @@ Now we will use Hazelcast Caching among the pods. Update the pom.xml file by add
 </dependency>
 ----
 
-Modify `MapApplicaiton.java` and create an application scoped Hazelcast instance inside the class:
-----
-...
-...
-import com.hazelcast.config.Config;
-import com.hazelcast.config.JoinConfig;
-import com.hazelcast.core.Hazelcast;
-import com.hazelcast.core.HazelcastInstance;
-import javax.enterprise.inject.Produces;
+Modify `MapApplicaiton.java` such that it contains a @Produces function which returns the Hazelcast instance. Also modify `MapManager.java` such that the map is not created locally but fetched from Hazelcast instance. The modified versions exist in the final directory.
 
-public class MapApplication extends Application {
-    @Produces
-    HazelcastInstance create() {
-        Config config = new Config();
-        config.getGroupConfig().setName("MP-GUIDE");
-        JoinConfig joinConfig = config.getNetworkConfig().getJoin();
-        joinConfig.getMulticastConfig().setEnabled(false);
-        joinConfig.getKubernetesConfig().setEnabled(true);
-        return Hazelcast.newHazelcastInstance(config);
-    }
-}
-----
-
-Then modify `MapManager.java` such that map is fetched from Hazelcast instance:
-----
-...
-...
-import javax.inject.Inject;
-import com.hazelcast.core.HazelcastInstance;
-
-@ApplicationScoped
-public class MapManager {
-
-    @Inject
-    HazelcastInstance instance;
-
-    //Map<String,String> keyValueStore = new ConcurrentHashMap<>();
-
-    private Map<String,String> retrieveMap() {
-        return instance.getMap("map");
-    }
-
-    ...
-    ...
-}
-----
-
-Before deploying on kubernetes, create rbac.yaml file as in the `final` directory. Role Based Access Controller(RBAC) configuration is used to give access to Kubernetes Master API from pods which runs microservices. Hazelcast requires a read access to autodiscover other hazelcast members and form hazelcast cluster.
+Before deploying on kubernetes, create rbac.yaml` file as in the `final` directory. Role Based Access Controller(RBAC) configuration is used to give access to Kubernetes Master API from pods which runs microservices. Hazelcast requires a read access to autodiscover other hazelcast members and form hazelcast cluster.
 
 *rbac.yaml:*
 ----
@@ -323,9 +229,6 @@ hazelcast from hazelcast-microprofile-statefulset-1
 
 As can be seen both nodes give the same value for the key now.
 
-// =================================================================================================
-// Scaling with Hazelcast
-// =================================================================================================
 == Scaling with Hazelcast
 
 Scale the cluster with one more pod and see that you still retrieve the shared data.
@@ -367,9 +270,7 @@ As you can see, `hazelcast-microprofile-statefulset-2` is returning correct data
 
 == Testing microservices that are running on {kube}
 
-Create a testing class under `/initial/src/test/java/io/openliberty/sample/system` named `MapResourceTest.java` .The contents of the test file is available under `final` directoy.
-
-Also change the pom.xml file simply by uncommenting the testing dependencies & plugins.
+Create a testing class under `/initial/src/test/java/io/openliberty/sample/system` named `MapResourceTest.java` .The contents of the test file is available under `final` directory.
 
 The test makes sure that the */put* endpoint is handled by one pod and */get* methods returns the same data from the other kubernetes pod.
 
@@ -404,12 +305,6 @@ If the tests pass, you’ll see a similar output to the following:
 [INFO] ------------------------------------------------------------------------
 ----
 
-// =================================================================================================
-// Tearing down the environment
-// =================================================================================================
 include::{templates-url}/minikube-teardown.adoc[]
 
-// =================================================================================================
-// You are done
-// =================================================================================================
 include::{templates-url}/youre-done.adoc[]
