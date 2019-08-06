@@ -169,23 +169,7 @@ Now we will use Hazelcast Caching among the pods. Update the pom.xml file by add
 
 Modify `MapApplicaiton.java` such that it contains a @Produces function which returns the Hazelcast instance. Also modify `MapManager.java` such that the map is not created locally but fetched from Hazelcast instance. The modified versions exist in the final directory.
 
-Before deploying on kubernetes, create rbac.yaml` file as in the `final` directory. Role Based Access Controller(RBAC) configuration is used to give access to Kubernetes Master API from pods which runs microservices. Hazelcast requires a read access to autodiscover other hazelcast members and form hazelcast cluster.
-
-*rbac.yaml:*
-----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: default-cluster
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: view
-subjects:
-  - kind: ServiceAccount
-    name: default
-    namespace: default
-----
+Before deploying on kubernetes, create `rbac.yaml` file as in the `final` directory. Role Based Access Controller(RBAC) configuration is used to give access to Kubernetes Master API from pods which runs microservices. Hazelcast requires a read access to autodiscover other hazelcast members and form hazelcast cluster.
 
 Rebuild the app and create new image:
 ----
