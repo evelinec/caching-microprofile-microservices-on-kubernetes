@@ -8,7 +8,7 @@
 :hazelcast: Hazelcast
 :framework: Microprofile
 :framework-short: microprofile
-:github-address: https://github.com/hazelcast-guides/caching-microprofiel-microservices-on-kubernetes
+:github-address: https://github.com/hazelcast-guides/caching-microprofile-microservices-on-kubernetes
 :templates-url: https://raw.githubusercontent.com/hazelcast-guides/adoc-templates/master
 
 = Caching Microservices with Hazelcast in Kubernetes
@@ -307,4 +307,4 @@ If the tests pass, you’ll see a similar output to the following:
 
 include::{templates-url}/minikube-teardown.adoc[]
 
-include::{templates-url}/youre-done.adoc[]
+include::{templates-url}/youre-done-caching-ms.adoc[]
