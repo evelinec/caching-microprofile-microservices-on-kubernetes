@@ -20,8 +20,8 @@ spec:
           image: openliberty-hazelcast-microprofile:1.0-SNAPSHOT
           imagePullPolicy: IfNotPresent
           ports:
-            - name: hzmp
-              containerPort: 9080
+          - containerPort: 5701
+          - containerPort: 9080
           env:
             - name: MY_POD_NAME
               valueFrom:
