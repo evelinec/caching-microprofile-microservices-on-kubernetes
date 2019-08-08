@@ -3,3 +3,5 @@
 [![Known Vulnerabilities](https://snyk.io//test/github/hazelcast-guides/caching-microprofile-microservices-on-kubernetes/badge.svg?targetFile=final/pom.xml)](https://snyk.io//test/github/hazelcast-guides/caching-microprofile-microservices-on-kubernetes?targetFile=final/pom.xml)
 
 Hazelcast Guides - Microprofile
+
+https://hazelcast.com/resources/caching-microprofile-microservices-kubernetes/
