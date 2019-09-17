@@ -1,0 +1,282 @@
+// Copyright (c) 2019 IBM Corporation and others.
+// Licensed under Creative Commons Attribution-NoDerivatives
+// 4.0 International (CC BY-ND 4.0)
+//   https://creativecommons.org/licenses/by-nd/4.0/
+//
+// Contributors:
+//     IBM Corporation
+//
+:page-layout: guide-multipane
+:projectid: caching-microprofile
+:page-duration: 15 minutes
+:page-releasedate: 2019-08-30
+:page-description: Learn how to cache data in microservices using Hazelcast
+:guide-author: Enes Ozcan
+:page-tags: ['Java EE']
+:page-related-guides: [ 'rest-intro', 'maven-multimodules', 'containerize', 'kubernetes-intro', 'sessions']
+:page-permalink: /guides/{projectid}
+//:common-includes: ../guides-common/
+:common-includes: https://raw.githubusercontent.com/OpenLiberty/guides-common/master
+:imagesdir: /img/guide
+:page-seo-title: Caching data in microservices using Hazelcast
+:page-seo-description: Find out how to cache data in MicroProfile microservices with Hazelcast running in Open Liberty
+= Caching data in microservices with Hazelcast
+
+[.hidden]
+NOTE: This repository contains the guide documentation source. To view the guide in published form,
+view it on the https://openliberty.io/guides/{projectid}.html[Open Liberty website].
+
+== What you'll learn
+
+You will learn how to use Hazelcast distributed caching to cache data for your MicroProfile microservices.
+
+This prototype includes two microservices that are running on separate Open Liberty application servers:
+
+* A `CatalogCluster` Hazelcast distributed caching cluster is configured for the two microservices.
+The product item data is stored in the caching nodes in this cluster.
+
+* Each microservice creates a Hazelcast instance and registered with the `CatalogCluster`.
+The product item data is shared for both of the services. The `catalog` microservice has read and write actions,
+and the `customer` microservice only has read action.
+
+* The `catalog` microservice has the `create`, `update` and `list` operations for creating,
+updating and listing the product items in the catalog.
+
+* The `customer` microservice has the `list` operation for listing the product items in the same catalog.
+
+image::/Users/evelinecai/OLG/caching/cachingmicroprofile/assets/Caching-MicroProfile.png[Caching MicroProfile Microservices]
+//image::Caching-MicroProfile.png[Caching MicroProfile Microservices]
+
+
+
+=== What is Hazelcast?
+
+Hazelcast is an open source In-Memory Data Grid (IMDG). It provides elastically scalable distributed In-Memory computing,
+widely recognized as the fastest and most scalable approach to application performance.
+
+Hazelcast is designed to scale up to hundreds and thousands of members. Simply add new members and they will automatically
+discover the cluster and will linearly increase both memory and processing capacity.
+
+
+=== Why Microprofile?
+
+The MicroProfile is a baseline platform definition that optimizes Enterprise Java for a microservices architecture and
+delivers application portability across multiple MicroProfile runtimes.
+To learn more about Microprofile, visit https://microprofile.io/[^].
+
+
+
+//////////////////////////////////////////
+// Getting started
+//////////////////////////////////////////
+
+[role='command']
+include::{common-includes}/gitclone.adoc[]
+
+=== Try what you'll build
+
+The `finish` directory in the root of this guide contains the finished application. Give it a try before you proceed.
+
+To try out the application, first navigate to the `finish` directory and then run the following Maven goal to build the
+application:
+
+[role='command']
+```
+cd finish
+mvn clean install
+```
+
+After the application is built, you can start the application with the following Maven goal:
+
+[role='command']
+```
+mvn liberty:start-server
+```
+
+Once the application is started, you can visit the `catalog` endpoint in the http://localhost:9080/openapi/ui[^] URL to create,
+update and view the product catalog.
+
+First, make a POST request to the `/catalog/items/{name}/{price}` endpoint. To make this request, expand the POST
+endpoint on the UI, click the `Try it out` button, provide an item name and a price,
+and then click the `Execute` button.
+The POST request adds a user-specified item and price to a cache storage
+that represents the product item in a catalog.
+
+Next, make a GET request to `/catalog/items` endpoint. To make this request, expand the GET
+endpoint on the UI, click the `Try it out` button,
+and then click the `Execute` button. The GET request
+returns all of the items from your cache storage.
+
+To update a product item, type in the same item name, and a different price in the POST request to the `/catalog/items/{name}/{price}`
+endpoint, then click the click the `Execute` button. Revisit the GET request to `/catalog/items` endpoint to see the updated value.
+
+You can also visit the `customer` endpoint in the http://localhost:9081/customer[^] URL at anytime to see the same product catalog.
+
+[role='command']
+include::{common-includes}/trywhatyoubuild-end.adoc[]
+
+
+
+== Caching data in Hazelcast
+
+Navigate to the `start` directory to begin.
+
+* Creating caching instances for the microservices in the `CatalogManager` and `CustomerController` classes
+
+In our `Catalog` microservice, the List called `products` in `CatalogManager.java` contains the items
+in the catalog. In `Customer` microservice, there is another list with the same name
+in `CustomerController.java` and we want these two lists to have the same content.
+In other words, items are added via `Catalog` microservice and read via `Customer`
+microservice. They should somehow share the data. Basicly this can be performed using a database
+common to both services. However, instead of dealing with database or another stuff,
+Hazelcast can be used as a common cache for the services. All we need to do is
+creating Hazelcast Instances on both of the services and they will found each other.
+From then on, all the communication, concurrency etc. issues will be handled by Hazelcast and it will provide
+us a shared list. Let's start to use Hazelcast in our microservices.
+
+* Configure the microservices to a shared distributed caching cluster with Hazelcast
+
+Apply the below steps in both `CatalogManager.java` in `Catalog` service and
+`CustomerController.java` in `Customer` service:
+
+*Create `configureHazelcast()` method for configuring and creating Hazelcast instances:*
+
+```
+private HazelcastInstance configureHazelcast(){
+		Config config = new Config();
+		config.getGroupConfig().setName("CatalogCluster");
+		return Hazelcast.newHazelcastInstance(config);
+	}
+```
+
+The group names for both instances must be same to make sure they connect to the same cluster. They're also
+must be application specific otherwise the instances may join another existing cluster
+in the network (for instance, default group name `dev`).
+
+*Create `HazelcastInstance` fields:*
+
+```
+private HazelcastInstance instance = configureHazelcast();
+```
+
+*Change `product` lists such that they're fetched from the Hazelcast Cluster:*
+
+_From_
+```
+private List<Item> products = new LinkedList<>();
+```
+_To_
+```
+private List<Item> products = instance.getList("items");
+```
+
+The list names ("items" for this case) must be same to make
+sure a common list in the cluster is used in both services. When one of the services calls
+`instance.getList("items")` method, a list with name "items" will be created on the
+Hazelcast cluster if not exists. From then on, for each call to cluster for this list
+the cluster will return the same existing list. This list then can be used as a `Java.util.List`
+interface implementation.
+
+That's all! Your microservices now use a shared & distributed list supplied by Hazelcast Cluster.
+
+
+// SAMPLE ONLY:
+// [role="code_command hotspot", subs="quotes"]
+// ----
+// #Create the `TodoModel` class.#
+// `src/main/java/io/openliberty/guides/todolistSample/models/TodoModel.java`
+// ----
+
+// TodoModel.java
+// [source, Java, linenums, indent=0, role="code_column"]
+// ----
+// include::finish/src/main/java/io/openliberty/guides/todolistSample/models/TodoModel.java[tags=**;!copyright;]
+// ----
+
+
+
+//////////////////////////////////////////
+// Building and running the application
+//////////////////////////////////////////
+
+[role='command']
+include::{common-includes}/mvnbuild.adoc[]
+
+Once the application is started, you can visit the `catalog` endpoint in the http://localhost:9080/openapi/ui[^] URL to create,
+update and view the product catalog.
+
+First, make a POST request to the `/catalog/items/{name}/{price}` endpoint. To make this request, expand the POST
+endpoint on the UI, click the `Try it out` button, provide an item name and a price,
+and then click the `Execute` button.
+The POST request adds a user-specified item and price to a cache storage
+that represents the product item in a catalog.
+
+Next, make a GET request to `/catalog/items` endpoint. To make this request, expand the GET
+endpoint on the UI, click the `Try it out` button,
+and then click the `Execute` button. The GET request
+returns all of the items from your cache storage.
+
+To update a product item, type in the same item name, and a different price in the POST request to the `/catalog/items/{name}/{price}`
+endpoint, then click the click the `Execute` button. Revisit the GET request to `/catalog/items` endpoint to see the updated value.
+
+You can also visit the `customer` endpoint in the http://localhost:9081/customer[^] URL at anytime to see the same product catalog.
+
+[role='command']
+include::{common-includes}/mvncompile.adoc[]
+
+
+== Testing the application
+
+* The automated endpoint tests are provided in the `finish` directory to test the microservices with the caching data:
+
+  - The `CatalogEndpointTest` tests the `catalog` microservice's create, update and list actions.
+This test also verify the `customer` microservice's list actions after each create and update product item actions.
+
+  - The `CustomerEndpointTest` tests the `customer` microservice's list action.
+
+
+== Tearing down the environment
+
+Stop the Open Liberty Server:
+
+```
+mvn liberty:stop-server
+```
+
+You do not apply another step to stop Hazelcast cluster since the cluster is formed with the microservice applications.
+When these applications stop, the cluster will shut down automatically.
+
+== Great work! You're done!
+
+//--** Briefly summarize what the user achieved in this guide (1-2 sentences).
+You have just completed building microservices with Hazelcast distributed caching to cache your data.
+
+//--** OPTIONAL: briefly state what the user could do next now that they've learned the
+//--** technologies in this guide.
+In this guide, you have used Hazelcast in embedded mode which means the Hazelcast nodes are created inside the
+microservice applications. One of the benefits of embedded mode is the connection between Hazelcast cluster and the application
+becomes faster. The downside is you can not scale the cluster up or down independent from the microservices.
+
+The other mode Hazelcast can be used is `client` mode in which a cluster is started apart from your microservices and the microservices
+connect to this cluster. All other functionalities of Hazelcast remain unchanged. Hazelcast cluster then can be scaled
+without changing the microservices. To run your services in this mode all you have to do is adding `hazeclast-client` jar to
+your classpath and changing the Hazelcast configuration such that:
+
+```
+private HazelcastInstance configureHazelcast(){
+		ClientConfig clientConfig = new ClientConfig();
+        clientConfig.getNetworkConfig().addAddress(CLUSTER_IP);
+        return HazelcastClient.newHazelcastClient(clientConfig);
+	}
+```
+
+Hazlecast not only provides list but other data structures implementing `java.collection` interface. You can check 
+the offical web site and documentation at link:https://hazelcast.org[here].
+
+
+//--** Include the below from the guides-common repo to tell users how they can contribute to the guide
+include::{common-includes}/attribution.adoc[subs="attributes"]
+
+//--** DO NO CREATE ANYMORE SECTIONS AT THIS POINT
+//--** Related guides will be added in automatically here if you included them in ":page-related-guides"
+// ------------ END ------------
